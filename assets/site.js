@@ -31,11 +31,10 @@
   /* ---- Éléments ---- */
   const hero = $('#hero'), stage = $('#stage');
   const voiture = $('#voiture'), file = $('.voiture .file'), intro = $('#intro'), indice = $('#indice');
-  const actB = $('#actB'), imgB = $('#actB img'), actC = $('#actC'), imgC = $('#feuxImg');
-  const ampoules = $$('#ampoules i'), canvas = $('#seq'), ctx = canvas.getContext('2d');
+  const actB = $('#actB'), actC = $('#actC'), canvas = $('#seq');
   const voile = $('#voile'), iaFilm = $('#iaFilm'), etapesFilm = $$('#etapesFilm li');
   const bands = $$('.band').map(el => ({ el, a: +el.dataset.a, b: +el.dataset.b, op: -1, k: -1, vis: null }));
-  const fixe = $('#fixe'), carte = $('#carte'), fin = $('#fin'), finImg = $('#fin img');
+  const fixe = $('#fixe'), carte = $('#carte');
 
   /* ---- Écriture DOM seulement quand la valeur change ---- */
   const cache = new Map();
@@ -51,57 +50,47 @@
   const MQLS = GATES.map(q => matchMedia(q));
   let scrub = false;
 
-  /* ---- Séquence d'images de la transformation (canevas, aucun « seek » vidéo) ---- */
-  const N = 52; // images 1 à 52 de la vidéo : la suite (portières ouvertes, fausse plaque) est écartée, la fin passe sur T5
-  let frames = [], set = '', lastDrawn = -1, wantFrame = 0, loadStarted = false;
+  /* ---- Trois séquences d'images (drone, feux, transformation) peintes sur canevas : aucun « seek » vidéo ---- */
+  const mkSeq = (name, el, n) => ({ name, el, ctx: el.getContext('2d'), n, frames: [], set: '', last: -1, want: 0, started: false, done: false });
+  const SEQ = { drone: mkSeq('drone', $('#seqB'), 61), feux: mkSeq('feux', $('#seqC'), 61), transfo: mkSeq('transfo', $('#seq'), 121) };
+  const ORDRE = ['drone', 'feux', 'transfo']; // chargement progressif : la suivante démarre quand la précédente est complète, ou plus tôt si on y arrive
   const pick = () => (innerWidth <= 720 ? 'm' : 'd');
-  function loadFrames() {
-    const s = pick();
-    if (s === set) return;
-    set = s; frames = new Array(N); lastDrawn = -1;
-    // Ordre : une image sur 8 d'abord (la séquence est utilisable très vite), puis on remplit.
+  function ensure(name) {
+    const S = SEQ[name], s = pick();
+    if (S.started && S.set === s) return;
+    S.started = true; S.done = false; S.set = s; S.frames = new Array(S.n); S.last = -1;
     const order = [];
-    for (const step of [8, 4, 2, 1]) for (let i = 0; i < N; i += step) if (!order.includes(i)) order.push(i);
-    let next = 0, active = 0;
+    for (const step of [8, 4, 2, 1]) for (let i = 0; i < S.n; i += step) if (!order.includes(i)) order.push(i);
+    let next = 0, active = 0, left = S.n;
     const pump = () => {
       while (active < 6 && next < order.length) {
         const i = order[next++], img = new Image(); active++;
         img.decoding = 'async';
-        img.onload = () => { active--; frames[i] = img; if (Math.abs(i - wantFrame) < 3) drawFrame(wantFrame, true); pump(); };
-        img.onerror = () => { active--; pump(); };
-        img.src = `assets/seq/${s}/f${String(i + 1).padStart(3, '0')}.webp`;
+        const fin = ok => { active--; left--; if (ok) { S.frames[i] = img; if (Math.abs(i - S.want) < 3) draw(S, S.want, true); }
+          if (!left) { S.done = true; const k = ORDRE.indexOf(name); if (ORDRE[k + 1]) ensure(ORDRE[k + 1]); } pump(); };
+        img.onload = () => fin(true); img.onerror = () => fin(false);
+        img.src = `assets/seq/${name}/${s}/f${String(i + 1).padStart(3, '0')}.webp`;
       }
     };
     pump();
   }
   function sizeCanvas() {
     const dpr = Math.min(devicePixelRatio || 1, 1.75);
-    canvas.width = Math.round(innerWidth * dpr); canvas.height = Math.round(stage.clientHeight * dpr);
-    lastDrawn = -1;
+    for (const S of Object.values(SEQ)) { S.el.width = Math.round(innerWidth * dpr); S.el.height = Math.round(stage.clientHeight * dpr); S.last = -1; }
   }
-  function drawFrame(i, force) {
-    let f = frames[i], j = i;
-    if (!f) for (let d = 1; d < N; d++) { if (frames[i - d]) { f = frames[j = i - d]; break; } if (frames[i + d]) { f = frames[j = i + d]; break; } }
-    if (!f || (!force && j === lastDrawn)) return;
-    lastDrawn = j;
-    const W = canvas.width, H = canvas.height, iw = f.naturalWidth, ih = f.naturalHeight;
-    const s = Math.max(W / iw, H / ih), w = iw * s, h = ih * s; // plein cadre ; sur téléphone les images sont déjà recadrées sur la voiture
-    ctx.drawImage(f, (W - w) / 2, (H - h) / 2, w, h);
+  function draw(S, i, force) {
+    S.want = i;
+    let f = S.frames[i], j = i;
+    if (!f) for (let d = 1; d < S.n; d++) { if (S.frames[i - d]) { f = S.frames[j = i - d]; break; } if (S.frames[i + d]) { f = S.frames[j = i + d]; break; } }
+    if (!f || (!force && j === S.last)) return;
+    S.last = j;
+    const W = S.el.width, H = S.el.height, iw = f.naturalWidth, ih = f.naturalHeight;
+    const s = Math.max(W / iw, H / ih), w = iw * s, h = ih * s; // plein cadre ; sur téléphone les images sont déjà recadrées
+    S.ctx.drawImage(f, (W - w) / 2, (H - h) / 2, w, h);
   }
-
-  /* ---- Les cinq feux de l'image, placés sur les vraies ampoules ---- */
-  const BULBS = [[.5124, .2279], [.5414, .2253], [.5712, .2233], [.6021, .2214], [.6334, .2188]];
-  function placeBulbs() {
-    const W = actC.clientWidth, H = actC.clientHeight, iw = 1920, ih = 1072;
-    const s = Math.max(W / iw, H / ih), dw = iw * s, dh = ih * s;
-    const pos = getComputedStyle(imgC).objectPosition.split(' ').map(v => parseFloat(v) / 100);
-    const ox = (W - dw) * pos[0], oy = (H - dh) * pos[1];
-    ampoules.forEach((b, n) => {
-      b.style.left = (ox + BULBS[n][0] * dw) + 'px';
-      b.style.top = (oy + BULBS[n][1] * dh) + 'px';
-      b.style.setProperty('--r', (0.0175 * dw) + 'px');
-    });
-  }
+  const frameAt = (S, p, a, b) => Math.round(clamp((p - a) / (b - a)) * (S.n - 1));
+  // Feux : images (à 12 im/s) où chaque feu s'allume dans la vidéo, puis l'image où tout s'éteint
+  const ALLUME = [5, 12, 18, 24, 30], ETEINT = 41;
 
   /* ---- Rendu d'une progression 0..1 du film ---- */
   const t0 = performance.now();
@@ -117,27 +106,24 @@
     put(intro, 'transform', `translate3d(0,${((1 - ia) * -70).toFixed(1)}px,0)`);
     put(indice, 'opacity', (1 - sm(p, 0, .03)).toFixed(3));
 
-    // B : la photo arrive derrière la voiture, en chevron, puis la caméra recule
+    // B : le drone arrive derrière la voiture, en chevron, puis suit la monoplace dans le Raidillon
     const wx = sm(p, .075, .19) * 130;
     put(actB, 'clipPath', wx >= 130 ? 'none' : `polygon(0 0,${wx.toFixed(2)}% 0,${(wx - 18).toFixed(2)}% 100%,0 100%)`);
-    put(imgB, 'transform', `scale(${(1.2 - .2 * sm(p, .08, .42)).toFixed(4)}) translate3d(0,${(sm(p, .08, .42) * -2).toFixed(2)}%,0)`);
+    if (p > .05 && p < .45) draw(SEQ.drone, frameAt(SEQ.drone, p, .1, .4));
 
-    // C : la grille de départ descend comme un portique, les feux s'allument
+    // C : la grille descend comme un portique ; les vrais feux de la vidéo s'allument, s'éteignent, la voiture part
+    if (p > .15) ensure('feux');
+    if (p > .35) ensure('transfo');
     const cy = sm(p, .355, .425) * 100;
     put(actC, 'clipPath', cy >= 100 ? 'none' : `inset(0 0 ${(100 - cy).toFixed(2)}% 0)`);
-    put(imgC, 'transform', `scale(${(1.1 - .1 * sm(p, .36, .62)).toFixed(4)})`);
-    const lit = p >= .528 ? 0 : clamp(Math.floor((p - .425) / .019) + 1, 0, 5);
-    ampoules.forEach((b, n) => tog(b, 'on', n < lit));
+    const fc = frameAt(SEQ.feux, p, .4, .6);
+    if (p > .3 && p < .68) draw(SEQ.feux, fc);
+    const lit = fc >= ETEINT ? 0 : ALLUME.filter(a => fc >= a).length; // les étapes suivent l'image affichée, pas le défilement
     etapesFilm.forEach((li, n) => tog(li, 'on', n < lit));
 
     // D : la transformation, image par image
     put(canvas, 'opacity', sm(p, .625, .66).toFixed(3));
-    wantFrame = Math.round(clamp((p - .64) / .27) * (N - 1));
-    const fx = sm(p, .9, .955) * 130; // la 208 entre par un chevron, comme la photo drone
-    put(fin, 'opacity', fx > 0 ? '1' : '0');
-    put(fin, 'clipPath', fx >= 130 ? 'none' : `polygon(${(100 - fx + 18).toFixed(2)}% 0,100% 0,100% 100%,${(100 - fx).toFixed(2)}% 100%)`);
-    put(finImg, 'transform', `scale(${(1.08 - .08 * sm(p, .9, 1)).toFixed(4)})`);
-    if (p > .55) drawFrame(wantFrame);
+    if (p > .55) draw(SEQ.transfo, frameAt(SEQ.transfo, p, .64, .93));
 
     put(voile, 'opacity', (sm(p, .15, .22) * (1 - sm(p, .93, 1) * .5)).toFixed(3));
     put(iaFilm, 'opacity', sm(p, .16, .22).toFixed(3));
@@ -213,10 +199,10 @@
   function enableScrub() {
     if (scrub) return; scrub = true;
     root.classList.remove('static');
-    sizeCanvas(); placeBulbs();
+    sizeCanvas();
     bands.forEach(b => { b.op = -1; b.k = -1; b.vis = null; });
     cache.clear();
-    if (!loadStarted) { loadStarted = true; (document.readyState === 'complete' ? loadFrames() : addEventListener('load', loadFrames, { once: true })); }
+    if (document.readyState === 'complete') ensure('drone'); else addEventListener('load', () => scrub && ensure('drone'), { once: true });
     onScroll();
   }
   function disableScrub() {
@@ -233,7 +219,7 @@
   let rz;
   addEventListener('resize', () => {
     clearTimeout(rz);
-    rz = setTimeout(() => { if (scrub) { sizeCanvas(); placeBulbs(); if (loadStarted) loadFrames(); drawFrame(wantFrame, true); } placeReperes(); cache.clear(); onScroll(); }, 120);
+    rz = setTimeout(() => { if (scrub) { sizeCanvas(); for (const S of Object.values(SEQ)) if (S.started) { ensure(S.name); draw(S, S.want, true); } } placeReperes(); cache.clear(); onScroll(); }, 120);
   });
   addEventListener('load', () => { placeReperes(); onScroll(); });
   if (document.fonts) document.fonts.ready.then(() => { placeReperes(); onScroll(); });

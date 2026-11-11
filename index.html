@@ -77,13 +77,9 @@ try{if(G.some(function(q){return matchMedia(q).matches}))document.documentElemen
       <p class="ia lbl">Image générée par IA</p>
     </div>
 
-    <div class="act b" id="actB" aria-hidden="true"><img src="assets/img/raidillon.webp" alt="" width="1920" height="1072"></div>
-    <div class="act c" id="actC" aria-hidden="true">
-      <img id="feuxImg" src="assets/img/feux.webp" alt="" width="1920" height="1072">
-      <div class="ampoules" id="ampoules"><i></i><i></i><i></i><i></i><i></i></div>
-    </div>
+    <div class="act b" id="actB" aria-hidden="true"><canvas id="seqB"></canvas></div>
+    <div class="act c" id="actC" aria-hidden="true"><canvas id="seqC"></canvas></div>
     <canvas class="act d" id="seq" aria-hidden="true"></canvas>
-    <picture class="act e" id="fin" aria-hidden="true"><source media="(max-width: 720px)" srcset="assets/img/fin-m.webp"><img src="assets/img/fin.webp" alt="" width="1920" height="1072"></picture>
     <div class="voile" id="voile" aria-hidden="true"></div>
 
     <div class="band b-raid" data-a=".20" data-b=".37">
@@ -91,14 +87,14 @@ try{if(G.some(function(q){return matchMedia(q).matches}))document.documentElemen
       <h2 class="split">Agréée par la préfecture.</h2>
       <p class="sous">Agrément n° [à venir]. Une école neuve, des moniteurs diplômés, une seule promesse : te rendre autonome au volant.</p>
     </div>
-    <div class="band b-feux" data-a=".40" data-b=".53">
+    <div class="band b-feux" data-a=".40" data-b=".537">
       <p class="lbl puce">Feux de départ</p>
       <h2 class="split">Cinq feux. Cinq étapes.</h2>
       <ol class="etapes-film" id="etapesFilm">
         <li><b>01</b>Code</li><li><b>02</b>Évaluation</li><li><b>03</b>Conduite</li><li><b>04</b>Examen</li><li><b>05</b>Permis</li>
       </ol>
     </div>
-    <div class="band b-vert" data-a=".53" data-b=".645">
+    <div class="band b-vert" data-a=".537" data-b=".645">
       <h2 class="split">Feu vert.</h2>
       <p class="sous">Le départ, c’est ton évaluation : une heure au volant pour savoir où tu en es.</p>
     </div>

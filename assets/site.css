@@ -88,6 +88,7 @@ body::before{content:"";position:fixed;inset:0;z-index:90;pointer-events:none;op
 .act.b,.act.c{z-index:2;overflow:hidden}
 .act.c{z-index:3}
 .act.b img,.act.c img{width:100%;height:100%;object-fit:cover;will-change:transform;transform-origin:50% 60%}
+.act.b canvas,.act.c canvas{display:block;width:100%;height:100%}
 .act.b{clip-path:polygon(0 0,0 0,0 100%,0 100%)}
 .act.c{clip-path:inset(0 0 100% 0)}
 .act.d{z-index:4;opacity:0;display:block}
@@ -120,12 +121,6 @@ body::before{content:"";position:fixed;inset:0;z-index:90;pointer-events:none;op
 .charge .w{animation:motIn 1s var(--e-out) both;animation-delay:calc(.2s + var(--i) * 70ms)}
 @keyframes motIn{from{opacity:0;transform:translateX(-60px) skewX(-12deg)}}
 
-/* Feux réels de l'image, rallumés en DOM */
-.ampoules{position:absolute;inset:0;pointer-events:none}
-.ampoules i{position:absolute;left:0;top:0;width:var(--r,20px);height:var(--r,20px);margin:calc(var(--r,20px) / -2) 0 0 calc(var(--r,20px) / -2);border-radius:50%;
-  background:radial-gradient(circle at 42% 38%,#ffd0c8 0,#ff4a3d 22%,#d8141b 60%,#7a0b0e 100%);opacity:0;transition:opacity .18s}
-.ampoules i::after{content:"";position:absolute;inset:-160%;border-radius:50%;background:radial-gradient(circle,rgba(255,40,40,.55),rgba(255,40,40,0) 62%)}
-.ampoules i.on{opacity:1}
 
 /* Bandes de texte sur le film */
 .band{position:absolute;z-index:6;color:#fff;text-shadow:var(--tshadow);opacity:0;pointer-events:none;--k:0}
@@ -420,9 +415,6 @@ body.pause *,body.pause *::before,body.pause *::after{animation-play-state:pause
 .prix b,.marque.grande b{line-height:.96}
 .band h2,.tete h2,.stand-texte h2,.arrivee-texte h2{line-height:.96}
 #parcours,#formules,#tarifs,#stand,#questions,#inscription{scroll-margin-top:96px}
-.act.e{z-index:4;opacity:0;overflow:hidden}
-.act.e img{width:100%;height:100%;object-fit:cover;will-change:transform}
-.static .act.e{display:none}
 /* monoplace : bords de l'image fondus sur 80 px */
 .voiture img{-webkit-mask-image:linear-gradient(90deg,transparent,#000 80px,#000 calc(100% - 80px),transparent),linear-gradient(180deg,transparent,#000 80px,#000 calc(100% - 80px),transparent);
   -webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent,#000 80px,#000 calc(100% - 80px),transparent),linear-gradient(180deg,transparent,#000 80px,#000 calc(100% - 80px),transparent);mask-composite:intersect}
